@@ -189,13 +189,5 @@ Ouvrir Kibana sur `https://localhost:5601` pour les dashboards.
 
 ---
 
-## Équipe
-
-- Achraf LIMEM
-- [Prénom NOM]
-- [Prénom NOM]
-- [Prénom NOM]
-- [Prénom NOM]
-
 MSc AI Deployment — 2025-2026  
 Enseignant : Matthieu LARBOULLET
