@@ -187,7 +187,4 @@ Ouvrir Kibana sur `https://localhost:5601` pour les dashboards.
 | Elasticsearch 9.x — HTTPS obligatoire | `verify_certs=False` + `basic_auth` |
 | Kibana — enrollment token requis | `bin\elasticsearch-create-enrollment-token -s kibana` |
 
----
 
-MSc AI Deployment — 2025-2026  
-Enseignant : Matthieu LARBOULLET
