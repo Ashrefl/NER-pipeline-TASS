@@ -1,7 +1,6 @@
 # NER Pipeline OSINT — Renseignement Militaire
 
 > Extraction automatique d'entités militaires sur 21 742 articles TASS (2016–2026)  
-> MSc AI Deployment — 2025-2026 | Enseignant : Matthieu LARBOULLET
 
 ---
 
