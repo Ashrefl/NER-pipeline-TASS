@@ -1,0 +1,8 @@
+# Dépendances du projet NER TASS
+requests
+beautifulsoup4
+lxml
+python-dotenv
+spacy>=3.8,<3.9
+elasticsearch>=9,<10
+pytest

@@ -1,67 +1,60 @@
-# NER Pipeline OSINT — Renseignement Militaire
+# NER Pipeline OSINT — Renseignement militaire
 
-> Extraction automatique d'entités militaires sur 21 742 articles TASS (2016–2026)  
+Extraction automatique d'entités militaires dans **21 742 articles** de l'agence TASS (rubrique *Military & Defense*, 2016-2026).
+
+Auteur : **Achraf LIMEM**
 
 ---
 
 ## Objectif
 
-Ce projet construit un pipeline NLP complet de bout en bout pour extraire des entités militaires depuis des articles de presse de l'agence TASS (média d'État russe). L'objectif est de détecter des signaux de renseignement — notamment une montée en tension militaire avant l'invasion de l'Ukraine en février 2022.
+Transformer des dépêches en texte libre en données structurées et interrogeables. Un modèle de reconnaissance d'entités nommées (NER) détecte trois types d'entités :
 
-**3 labels d'entités extraites :**
-- `MIL_UNIT` — Unités militaires (ex: *47th artillery brigade*, *VDV*)
-- `MIL_ORG` — Organisations militaires (ex: *NATO*, *Russian Defense Ministry*, *Pentagon*)
-- `MIL_WEAPON` — Systèmes d'armes (ex: *Kalibr*, *HIMARS*, *S-400*, *Geran-2*)
+| Label | Définition | Exemples |
+|---|---|---|
+| `MIL_UNIT` | Unités militaires | *47th artillery brigade*, *VDV* |
+| `MIL_ORG` | Organisations, ministères, alliances | *NATO*, *Pentagon*, *Russian Defense Ministry* |
+| `MIL_WEAPON` | Systèmes d'armes | *S-400*, *HIMARS*, *Kalibr* |
+
+Aucun label de type personne n'est extrait (minimisation des données personnelles dès la conception).
 
 ---
 
 ## Résultats clés
 
-| Métrique | Valeur |
+| Indicateur | Valeur |
 |---|---|
-| Corpus total | 21 742 articles TASS (2016–2026) |
-| Articles annotés (entraînement) | 500 articles via Mistral API |
-| Entités dans le dataset d'entraînement | 6 023 (MIL_UNIT: 2421, MIL_ORG: 2300, MIL_WEAPON: 1302) |
-| F-score du modèle NER | 0.444 (modèle vide, sans transfer learning) |
+| Corpus | 21 742 articles |
+| Articles annotés par LLM (Mistral) | 500, soit 6 023 entités |
+| F-score global du modèle (jeu de validation) | 0,444 |
 | Entités extraites sur le corpus complet | 255 615 |
-| Arme la plus mentionnée | S-400 (564 articles) |
+| Arme la plus citée | S-400 (617 articles) |
+| Documents indexés dans Elasticsearch | 21 742, 0 erreur |
 
 ---
 
 ## Architecture du pipeline
 
 ```
-data_set.json (21 742 articles)
-        │
-        ▼
-[Étape 1] Échantillonnage aléatoire (seed=42)
-        │
-        ▼
-articles_500.json (500 articles)
-        │
-        ▼
-[Étape 2] 1_annotate_llm.py — Annotation via Mistral API
-        │
-        ▼
-train_llm.json (387) + dev_llm.json (97)
-        │
-        ▼
-[Étape 3] 2_finetune_ner.py — Fine-tuning spaCy NER
-        │
-        ▼
-model_ner/model-best/ (modèle entraîné)
-        │
-        ▼
-[Étape 4] 3_inference.py — Inférence sur les 21 742 articles
-        │
-        ▼
-corpus_annotated.json (21 742 articles enrichis)
-        │
-        ▼
-[Étape 5] 4_ingest_elasticsearch.py — Ingestion dans Elasticsearch
-        │
-        ▼
-Index Elasticsearch → Dashboard Kibana
+tass.com
+   │  0_scrape_tass.py          collecte (RSS + pages HTML)
+   ▼
+data_set.json                   21 742 articles
+   │  échantillonnage (seed 42)
+   ▼
+articles_500.json               500 articles
+   │  1_annotate_llm.py         annotation via l'API Mistral
+   ▼
+train_llm.json / dev_llm.json   données d'entraînement (80 / 20)
+   │  2_finetune_ner.py         entraînement du modèle spaCy
+   ▼
+model_ner/model-best/
+   │  3_inference.py            application du modèle au corpus
+   ▼
+corpus_annotated.json           21 742 articles enrichis
+   │  4_ingest_elasticsearch.py ingestion (API Bulk, HTTPS)
+   ▼
+Elasticsearch (index military_ner)  →  Kibana
 ```
 
 ---
@@ -70,46 +63,68 @@ Index Elasticsearch → Dashboard Kibana
 
 | Composant | Technologie |
 |---|---|
-| Annotation LLM | Mistral API (`mistral-small-latest`) |
-| Modèle NER | spaCy 3.8 |
-| Base de données | Elasticsearch 9.4.3 |
-| Visualisation | Kibana 9.4.3 |
 | Langage | Python 3.13 |
+| Collecte | requests, BeautifulSoup, lxml |
+| Annotation | API Mistral (`mistral-small-latest`) |
+| Modèle NER | spaCy 3.8 |
+| Stockage et recherche | Elasticsearch 9.4.3 |
+| Visualisation | Kibana 9.4.3 |
+| Tests et intégration continue | pytest, GitHub Actions |
+
+---
+
+## Structure du dépôt
+
+| Fichier / dossier | Rôle |
+|---|---|
+| `0_scrape_tass.py` | Collecte des articles TASS |
+| `1_annotate_llm.py` | Annotation automatique via Mistral |
+| `2_finetune_ner.py` | Entraînement du modèle NER |
+| `3_inference.py` | Application du modèle aux 21 742 articles |
+| `4_ingest_elasticsearch.py` | Indexation dans Elasticsearch |
+| `train_llm.json`, `dev_llm.json` | Jeux d'entraînement et de validation annotés |
+| `tests/` | Tests automatiques (pytest) |
+| `.github/workflows/tests.yml` | Intégration continue : tests lancés à chaque push |
+| `requirements.txt` | Dépendances Python |
+| `.env.example` | Modèle de configuration des secrets |
+
+Les fichiers volumineux (`data_set.json`, `corpus_annotated.json`, `model_ner/`) et le fichier `.env` ne sont pas versionnés (voir `.gitignore`).
 
 ---
 
 ## Installation
 
 ```bash
-pip install spacy requests elasticsearch
+pip install -r requirements.txt
 ```
 
-> ⚠️ `en_core_web_sm` nécessite un accès à internet non filtré.  
-> Si indisponible, le script `2_finetune_ner.py` utilise `spacy.blank("en")` automatiquement.
+### Configuration des secrets
+
+Les identifiants ne sont jamais écrits dans le code. Copier `.env.example` sous le nom `.env`, puis renseigner :
+
+```
+MISTRAL_API_KEY=...        # clé API Mistral (console.mistral.ai)
+ES_HOST=https://localhost:9200
+ES_USER=elastic
+ES_PASS=...                # mot de passe Elasticsearch
+```
+
+Le fichier `.env` est exclu du dépôt par `.gitignore`.
 
 ---
 
-## Configuration — Variables à renseigner
+## Exécution (dans l'ordre)
 
-Avant de lancer les scripts, remplace les valeurs suivantes :
-
-**Dans `1_annotate_llm.py` :**
-```python
-API_KEY = "VOTRE_CLE_MISTRAL"   # Obtenir sur console.mistral.ai (gratuit)
+```bash
+python 0_scrape_tass.py            # 1. collecte        → data_set.json
+# 2. échantillonnage               → articles_500.json (voir ci-dessous)
+python 1_annotate_llm.py           # 3. annotation      → train_llm.json, dev_llm.json
+python 2_finetune_ner.py           # 4. entraînement    → model_ner/model-best/
+python 3_inference.py              # 5. inférence       → corpus_annotated.json
+python 4_ingest_elasticsearch.py   # 6. indexation      → index military_ner
 ```
 
-**Dans `4_ingest_elasticsearch.py` :**
-```python
-ES_PASS = "VOTRE_MOT_DE_PASSE_ES"   # Défini lors du premier lancement d'Elasticsearch
-```
-
----
-
-## Lancer le pipeline (dans l'ordre)
-
-### Étape 1 — Préparer les 500 articles
-
-Assure-toi d'avoir `data_set.json` dans le dossier, puis extrais l'échantillon :
+Échantillonnage des 500 articles :
 
 ```python
 import json, random
@@ -121,58 +136,42 @@ with open("articles_500.json", "w", encoding="utf-8") as f:
     json.dump(sample, f, ensure_ascii=False, indent=2)
 ```
 
-### Étape 2 — Annotation LLM
-
-```bash
-python 1_annotate_llm.py
-```
-
-Durée estimée : ~15 minutes pour 500 articles.  
-Génère `train_llm.json` et `dev_llm.json`.
-
-### Étape 3 — Fine-tuning NER
-
-```bash
-python 2_finetune_ner.py
-```
-
-Durée estimée : 20–40 minutes selon le CPU.  
-Génère `model_ner/model-best/`.
-
-### Étape 4 — Inférence sur le corpus complet
-
-```bash
-python 3_inference.py
-```
-
-Durée estimée : ~8 minutes pour 21 742 articles.  
-Génère `corpus_annotated.json`.
-
-### Étape 5 — Ingestion dans Elasticsearch
-
-Lancer Elasticsearch 9.4.3 en local, puis :
-
-```bash
-python 4_ingest_elasticsearch.py
-```
-
-Durée estimée : ~2 minutes.  
-Ouvrir Kibana sur `https://localhost:5601` pour les dashboards.
+Elasticsearch doit être démarré avant l'indexation. Kibana est ensuite accessible sur `http://localhost:5601`.
 
 ---
 
-## Fichiers du repo
+## Tests
 
-| Fichier | Description |
+```bash
+pytest -v
+```
+
+27 tests couvrent les fonctions critiques : extraction des champs du scraper, nettoyage des réponses du LLM, calcul des positions des entités (hallucinations et chevauchements), conversion des dates, construction des documents Elasticsearch, ainsi qu'un test d'intégration de l'inférence.
+
+Les tests sont lancés automatiquement par **GitHub Actions** à chaque push (onglet *Actions* du dépôt).
+
+`2_finetune_ner.py` (entraînement complet, plusieurs dizaines de minutes) n'est pas couvert par les tests automatiques.
+
+---
+
+## Sécurité et données personnelles
+
+- Secrets lus depuis un fichier `.env` non versionné.
+- Échanges avec Elasticsearch en HTTPS avec authentification.
+- Aucune entité de type personne extraite ; ni auteur ni commentaire collectés.
+- Le détail figure dans les plans d'infrastructure et de pipeline.
+
+---
+
+## Limites et pistes d'amélioration (non réalisées)
+
+| Limite | Piste |
 |---|---|
-| `1_annotate_llm.py` | Annotation LLM via Mistral API |
-| `2_finetune_ner.py` | Fine-tuning du modèle NER spaCy |
-| `3_inference.py` | Inférence sur le corpus complet |
-| `4_ingest_elasticsearch.py` | Ingestion dans Elasticsearch |
-| `train_llm.json` | Dataset d'entraînement (387 articles annotés) |
-| `dev_llm.json` | Dataset de validation (97 articles annotés) |
-
-> ℹ️ `data_set.json` et `corpus_annotated.json` ne sont pas inclus dans ce repo (fichiers trop volumineux — plusieurs centaines de Mo).
+| Étapes lancées manuellement | Planification (Planificateur de tâches / cron) et alertes par e-mail en cas d'erreur |
+| Pas de réentraînement automatique | Réentraînement périodique et suivi de la dérive du modèle |
+| Entités non normalisées (`UAV` / `UAVs`) | Normalisation des noms avant indexation |
+| F-score de `MIL_UNIT` faible (0,355) | Modèle pré-entraîné, relecture humaine d'un échantillon d'annotations |
+| Elasticsearch mono-nœud | Cluster de 3 nœuds avec réplication et snapshots |
 
 ---
 
@@ -180,10 +179,8 @@ Ouvrir Kibana sur `https://localhost:5601` pour les dashboards.
 
 | Problème | Solution |
 |---|---|
-| API Gemini — quota 0 | Switch vers Mistral API |
-| `google.generativeai` déprécié | Migration vers `from google import genai` |
-| `en_core_web_sm` indisponible | `spacy.blank("en")` utilisé à la place |
-| Elasticsearch 9.x — HTTPS obligatoire | `verify_certs=False` + `basic_auth` |
-| Kibana — enrollment token requis | `bin\elasticsearch-create-enrollment-token -s kibana` |
-
-
+| Quota nul sur l'API Gemini | Passage à l'API Mistral |
+| `en_core_web_sm` indisponible | Modèle `spacy.blank("en")` |
+| Elasticsearch 9 : HTTPS obligatoire | `basic_auth` + certificat auto-signé |
+| Kibana : jeton d'enrôlement requis | `elasticsearch-create-enrollment-token -s kibana` |
+| Comptage incomplet juste après l'ingestion | `es.indices.refresh()` avant le comptage |
