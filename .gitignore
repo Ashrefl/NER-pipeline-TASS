@@ -1,0 +1,38 @@
+# ── Données lourdes (ne pas pusher sur GitHub) ──────────────────────────────
+data_set.json
+articles_500.json
+corpus_annotated.json
+annotations_llm.json
+annotations_500.json
+annotations_spacy_format.json
+
+# ── Modèle NER entraîné (trop lourd) ────────────────────────────────────────
+model_ner/
+
+# ── Fichiers de config secrets ───────────────────────────────────────────────
+.env
+*.env
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+
+# ── Jupyter ──────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Journaux et caches de tests ──────────────────────────────────────────────
+scraper.log
+*.log
+.pytest_cache/
