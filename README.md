@@ -146,7 +146,7 @@ Elasticsearch doit être démarré avant l'indexation. Kibana est ensuite access
 pytest -v
 ```
 
-27 tests couvrent les fonctions critiques : extraction des champs du scraper, nettoyage des réponses du LLM, calcul des positions des entités (hallucinations et chevauchements), conversion des dates, construction des documents Elasticsearch, ainsi qu'un test d'intégration de l'inférence.
+32 tests couvrent les fonctions critiques : extraction des champs du scraper (titre, texte, date, tags), nettoyage des réponses du LLM, calcul des positions des entités (hallucinations et chevauchements), conversion des dates, construction des documents Elasticsearch, ainsi qu'un test d'intégration de l'inférence.
 
 Les tests sont lancés automatiquement par **GitHub Actions** à chaque push (onglet *Actions* du dépôt).
 
