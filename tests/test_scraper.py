@@ -39,3 +39,37 @@ def test_extract_tags_sans_doublon(scraper):
     html = '<a class="tag">UAV</a><a class="tags-item">UAV</a><a class="tag">NATO</a>'
     soup = BeautifulSoup(html, "lxml")
     assert scraper.extract_tags(soup) == ["UAV", "NATO"]
+
+
+def test_extract_title_prefere_og_title(scraper):
+    html = '<meta property="og:title" content="Titre officiel"><h1>Autre titre</h1>'
+    assert scraper.extract_title(BeautifulSoup(html, "lxml")) == "Titre officiel"
+
+
+def test_extract_title_repli_sur_h1(scraper):
+    assert scraper.extract_title(BeautifulSoup("<h1>Titre H1</h1>", "lxml")) == "Titre H1"
+
+
+def test_extract_text_repere_le_marqueur_tass(scraper):
+    html = (
+        "<nav><p>Menu de navigation du site avec plusieurs liens inutiles</p></nav>"
+        "<div class='body'><p>MOSCOW, October 4. /TASS/. The Russian Defense Ministry said it strikes.</p>"
+        "<p>Second paragraph of the article with enough characters to be kept.</p></div>"
+    )
+    text = scraper.extract_text(BeautifulSoup(html, "lxml"))
+    assert text.startswith("MOSCOW, October 4. /TASS/.")
+    assert "Second paragraph" in text
+    assert "Menu de navigation" not in text
+
+
+def test_extract_text_bloc_sans_paragraphe(scraper):
+    corps = "MOSCOW, October 4. /TASS/. " + "Long article body without paragraph tags. " * 6
+    html = f"<div class='news'>{corps}</div>"
+    assert "/TASS/" in scraper.extract_text(BeautifulSoup(html, "lxml"))
+
+
+def test_extract_date_ignore_la_date_du_pied_de_page(scraper):
+    html = ("<p>Report published on September 28, 2025.</p>"
+            "<footer>Certificate was issued on April 2, 1999</footer>")
+    soup = BeautifulSoup(html, "lxml")
+    assert scraper.extract_date(soup) == int(datetime(2025, 9, 28).timestamp())
