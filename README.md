@@ -20,6 +20,17 @@ Aucun label de type personne n'est extrait (minimisation des données personnell
 
 ---
 
+## Correspondance avec les blocs de compétences
+
+| Bloc | Livrable | Fichiers |
+|---|---|---|
+| Bloc 2 — Architecture de données | Code d'infrastructure | `4_ingest_elasticsearch.py` (index, mapping, ingestion sécurisée), `.env.example` |
+| Bloc 3 — Pipeline de données | Code du pipeline | `0_scrape_tass.py` (collecte), `1_annotate_llm.py` (annotation), `tests/`, `.github/workflows/tests.yml` |
+| Bloc 4 — Solution d'IA | Code de développement | `2_finetune_ner.py` (entraînement et évaluation du modèle NER) |
+| Bloc 4 — Solution d'IA | Code de déploiement | `3_inference.py` (application du modèle aux 21 742 articles), `.github/workflows/tests.yml` (intégration continue) |
+
+---
+
 ## Résultats clés
 
 | Indicateur | Valeur |
