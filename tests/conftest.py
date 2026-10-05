@@ -44,3 +44,8 @@ def inference():
 @pytest.fixture(scope="session")
 def ingestion():
     return load_script("4_ingest_elasticsearch.py")
+
+
+@pytest.fixture(scope="session")
+def finetune():
+    return load_script("2_finetune_ner.py")
