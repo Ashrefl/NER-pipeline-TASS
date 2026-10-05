@@ -157,11 +157,11 @@ Elasticsearch doit être démarré avant l'indexation. Kibana est ensuite access
 pytest -v
 ```
 
-32 tests couvrent les fonctions critiques : extraction des champs du scraper (titre, texte, date, tags), nettoyage des réponses du LLM, calcul des positions des entités (hallucinations et chevauchements), conversion des dates, construction des documents Elasticsearch, ainsi qu'un test d'intégration de l'inférence.
+36 tests couvrent les fonctions critiques : extraction des champs du scraper (titre, texte, date, tags), nettoyage des réponses du LLM, calcul des positions des entités (hallucinations et chevauchements), préparation des données et entraînement court du modèle, conversion des dates, construction des documents Elasticsearch, ainsi qu'un test d'intégration de l'inférence.
 
 Les tests sont lancés automatiquement par **GitHub Actions** à chaque push (onglet *Actions* du dépôt).
 
-`2_finetune_ner.py` (entraînement complet, plusieurs dizaines de minutes) n'est pas couvert par les tests automatiques.
+L'entraînement complet (plusieurs dizaines de minutes) n'est pas relancé par la CI : les tests vérifient le chargement des données et un entraînement de 2 epochs sur un mini-jeu. L'entraînement utilise une graine fixe (42) pour être reproductible.
 
 ---
 
