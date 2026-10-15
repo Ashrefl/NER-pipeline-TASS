@@ -127,13 +127,14 @@ Le fichier `.env` est exclu du dépôt par `.gitignore`.
 ## Exécution (dans l'ordre)
 
 ```bash
-python 0_scrape_tass.py            # 1. collecte        → data_set.json
+python 0_scrape_tass.py            # 1. collecte        → ajoute les nouveaux articles à data_set.json
 # 2. échantillonnage               → articles_500.json (voir ci-dessous)
 python 1_annotate_llm.py           # 3. annotation      → train_llm.json, dev_llm.json
 python 2_finetune_ner.py           # 4. entraînement    → model_ner/model-best/
 python 3_inference.py              # 5. inférence       → corpus_annotated.json
 python 4_ingest_elasticsearch.py   # 6. indexation      → index military_ner
 ```
+Le corpus de départ (data_set.json, 21 742 articles) a été fourni. Le script 0_scrape_tass.py l’enrichit avec les nouveaux articles publiés, sans doublon.
 
 Échantillonnage des 500 articles :
 
