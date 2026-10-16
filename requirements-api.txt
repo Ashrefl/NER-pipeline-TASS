@@ -1,0 +1,4 @@
+# Dépendances minimales de l'API (utilisées par le Dockerfile)
+spacy>=3.8,<3.9
+fastapi>=0.110
+uvicorn>=0.29

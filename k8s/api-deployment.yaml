@@ -1,0 +1,31 @@
+# Déploiement de l'API sur Kubernetes (évolution prévue, non déployée)
+# kubectl apply -f k8s/api-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ner-api
+spec:
+  replicas: 2                       # deux copies : l'API reste disponible si une tombe
+  selector:
+    matchLabels: { app: ner-api }
+  template:
+    metadata:
+      labels: { app: ner-api }
+    spec:
+      containers:
+        - name: ner-api
+          image: ghcr.io/OWNER/ner-tass-api:latest
+          ports: [{ containerPort: 8000 }]
+          readinessProbe:
+            httpGet: { path: /health, port: 8000 }
+            initialDelaySeconds: 10
+          resources:
+            limits: { memory: "1Gi", cpu: "500m" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ner-api
+spec:
+  selector: { app: ner-api }
+  ports: [{ port: 80, targetPort: 8000 }]

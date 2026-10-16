@@ -6,3 +6,9 @@ python-dotenv
 spacy>=3.8,<3.9
 elasticsearch>=9,<10
 pytest
+# API de prédiction, monitoring et tests de l'API
+fastapi>=0.110
+uvicorn>=0.29
+httpx
+pandas
+evidently>=0.7,<0.8

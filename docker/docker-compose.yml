@@ -1,0 +1,64 @@
+# Infrastructure complète du projet, décrite en code :
+#   Elasticsearch (stockage et recherche), Kibana (visualisation), API NER (prédiction)
+#
+# Lancer depuis la racine du projet :
+#   docker compose -f docker/docker-compose.yml --env-file .env up -d
+# Arrêter :
+#   docker compose -f docker/docker-compose.yml down
+#
+# Variables lues dans .env (jamais publié) : ES_PASS, KIBANA_PASS
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
+    container_name: es
+    environment:
+      - discovery.type=single-node          # un seul serveur, comme en local
+      - ELASTIC_PASSWORD=${ES_PASS}
+      - xpack.security.enabled=true         # authentification obligatoire
+      - xpack.security.http.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data   # les données survivent au redémarrage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u elastic:${ES_PASS} http://localhost:9200/_cluster/health | grep -q status"]
+      interval: 15s
+      retries: 20
+
+  # Donne un mot de passe au compte technique de Kibana, puis s'arrête
+  setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    command: >
+      bash -c 'curl -s -u elastic:${ES_PASS} -H "Content-Type: application/json"
+      -X POST http://elasticsearch:9200/_security/user/kibana_system/_password
+      -d "{\"password\":\"${KIBANA_PASS}\"}"'
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.4.3
+    container_name: kibana
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASS}
+    ports:
+      - "5601:5601"
+
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: ner-api
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+volumes:
+  es_data:
