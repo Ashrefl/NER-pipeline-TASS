@@ -1,0 +1,10 @@
+.env
+.git
+__pycache__
+tests/
+monitoring/
+model_ner/archive/
+data_set.json
+corpus_annotated.json
+*_llm.json
+articles_500.json
