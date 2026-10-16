@@ -1,0 +1,42 @@
+# Pipeline de données automatisé
+#   - chaque jour à 6 h (UTC), ou à la main depuis l'onglet Actions
+#   - collecte des nouveaux articles TASS, contrôle qualité, tests
+#   - les données et le rapport qualité sont conservés 30 jours
+name: Pipeline de collecte quotidien
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+
+      - name: 1. Collecte des nouveaux articles
+        run: |
+          mkdir -p run && cp 0_scrape_tass.py run/
+          cd run && python 0_scrape_tass.py
+
+      - name: 2. Contrôle qualité des données collectées
+        run: python scripts/check_quality.py run/data_set.json --report run/quality_report.json
+
+      - name: 3. Tests automatiques
+        run: pytest -q
+
+      - name: 4. Conservation des résultats
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: collecte-${{ github.run_number }}
+          path: |
+            run/data_set.json
+            run/quality_report.json
+            run/scraper.log
+          retention-days: 30
