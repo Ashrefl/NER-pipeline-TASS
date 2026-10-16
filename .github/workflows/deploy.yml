@@ -1,0 +1,44 @@
+# CI/CD de l'API : à chaque modification du code
+#   1. tests automatiques
+#   2. construction de l'image Docker de l'API
+#   3. test de fumée : on lance le conteneur et on appelle /health et /predict
+name: CI/CD API
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: pytest -v
+
+  build-and-check:
+    needs: tests            # pas de déploiement si un test échoue
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Construire l'image Docker
+        run: docker build -t ner-tass-api .
+
+      - name: Lancer le conteneur
+        run: docker run -d -p 8000:8000 --name api ner-tass-api
+
+      - name: Test de fumée de l'API
+        run: |
+          for i in $(seq 1 30); do curl -sf http://localhost:8000/health && break; sleep 2; done
+          curl -sf -X POST http://localhost:8000/predict \
+            -H "Content-Type: application/json" \
+            -d '{"text": "Russia deployed S-400 systems near the border."}'
+
+      - name: Journal du conteneur en cas d'échec
+        if: failure()
+        run: docker logs api
