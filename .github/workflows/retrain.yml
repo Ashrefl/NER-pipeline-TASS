@@ -1,0 +1,34 @@
+# Réentraînement automatisé du modèle NER
+#   - lancé le 1er de chaque mois, ou à la main depuis l'onglet Actions
+#   - le nouveau modèle n'est gardé que s'il bat le modèle actuel (retrain/retrain.py)
+name: Réentraînement du modèle
+
+on:
+  schedule:
+    - cron: "0 3 1 * *"     # le 1er du mois à 3 h (UTC)
+  workflow_dispatch:
+    inputs:
+      epochs:
+        description: "Nombre maximal d'epochs"
+        default: "30"
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+
+      - name: Réentraîner et comparer
+        run: python retrain/retrain.py --epochs ${{ github.event.inputs.epochs || 30 }}
+
+      - name: Sauvegarder le modèle et l'historique des décisions
+        uses: actions/upload-artifact@v4
+        with:
+          name: modele-reentraine
+          path: |
+            model_ner/model-best/
+            retrain/history.json
