@@ -1,6 +1,8 @@
 # Réentraînement automatisé du modèle NER
 #   - lancé le 1er de chaque mois, ou à la main depuis l'onglet Actions
+#   - utilise les exemples d'entraînement à jour, enrichis chaque jour par pipeline.yml
 #   - le nouveau modèle n'est gardé que s'il bat le modèle actuel (retrain/retrain.py)
+#   - la décision et, si besoin, le nouveau modèle sont enregistrés dans le dépôt
 name: Réentraînement du modèle
 
 on:
@@ -11,6 +13,9 @@ on:
       epochs:
         description: "Nombre maximal d'epochs"
         default: "30"
+
+permissions:
+  contents: write           # pour enregistrer la décision et le nouveau modèle
 
 jobs:
   retrain:
@@ -24,6 +29,13 @@ jobs:
 
       - name: Réentraîner et comparer
         run: python retrain/retrain.py --epochs ${{ github.event.inputs.epochs || 30 }}
+
+      - name: Enregistrer la décision et le modèle dans le dépôt
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add retrain/history.json model_ner/model-best
+          git diff --cached --quiet || (git commit -m "Réentraînement automatique du $(date +%Y-%m-%d)" && git push)
 
       - name: Sauvegarder le modèle et l'historique des décisions
         uses: actions/upload-artifact@v4
