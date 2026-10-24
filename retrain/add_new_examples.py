@@ -32,6 +32,7 @@ NEW_RECORDS = ROOT / "retrain" / "new_annotations.json"
 MIN_CHARS   = 100   # même filtre que pour les 500 premiers articles
 BATCH       = 3     # même taille de lot que 1_annotate_llm.py
 DELAY       = 2.0   # pause entre deux appels à Mistral
+RETRY_WAITS = [10, 30, 0]   # 3 essais : attente de 10 s, puis 30 s, en cas de refus de Mistral
 
 
 def load_annotator():
@@ -97,11 +98,19 @@ def main():
     added, records = 0, read_json(NEW_RECORDS, [])
     for i in range(0, len(batch_articles), BATCH):
         group = batch_articles[i:i + BATCH]
-        try:
-            results = ann.annotate_batch(group)
-        except Exception as e:
-            print(f"  Lot ignoré, erreur Mistral : {e}")
-            continue
+        results = None
+        for attempt, wait in enumerate(RETRY_WAITS, start=1):
+            try:
+                results = ann.annotate_batch(group)
+                break
+            except Exception as e:
+                if attempt == len(RETRY_WAITS):
+                    print(f"  Lot ignoré après {attempt} essais, erreur Mistral : {e}")
+                else:
+                    print(f"  Erreur Mistral ({e}), nouvel essai dans {wait} s...")
+                    time.sleep(wait)
+        if results is None:
+            continue   # ces articles seront retentés à la prochaine exécution
         for art, raw_entities in zip(group, results):
             text = full_text(art)
             spans = ann.find_spans(text, raw_entities)
