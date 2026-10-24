@@ -1,13 +1,20 @@
 # Pipeline de données automatisé
 #   - chaque jour à 6 h (UTC), ou à la main depuis l'onglet Actions
-#   - collecte des nouveaux articles TASS, contrôle qualité, tests
-#   - les données et le rapport qualité sont conservés 30 jours
+#   1. collecte des nouveaux articles TASS
+#   2. contrôle qualité
+#   3. tests automatiques
+#   4. annotation des nouveaux articles par Mistral, ajoutés aux exemples d'entraînement
+#   5. enregistrement des nouveaux exemples dans le dépôt
+#   Les nouveaux exemples s'accumulent ; le réentraînement mensuel (retrain.yml) les utilise.
 name: Pipeline de collecte quotidien
 
 on:
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
+
+permissions:
+  contents: write           # pour enregistrer les nouveaux exemples dans le dépôt
 
 jobs:
   pipeline:
@@ -30,7 +37,21 @@ jobs:
       - name: 3. Tests automatiques
         run: pytest -q
 
-      - name: 4. Conservation des résultats
+      - name: 4. Annotation des nouveaux articles par Mistral
+        env:
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+        run: python retrain/add_new_examples.py run/data_set.json --max 30
+
+      - name: 5. Enregistrement des nouveaux exemples dans le dépôt
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for f in train_llm.json retrain/annotated_ids.json retrain/new_annotations.json; do
+            if [ -f "$f" ]; then git add "$f"; fi
+          done
+          git diff --cached --quiet || (git commit -m "Nouveaux exemples annotés du $(date +%Y-%m-%d)" && git push)
+
+      - name: 6. Conservation des résultats
         if: always()
         uses: actions/upload-artifact@v4
         with:
